@@ -26,7 +26,14 @@
 <p class="rotate-hint">↻ 横屏观看，视野更大</p>
 <div class="stage-bottom">
 <p id="gestureHint" class="gesture-hint">拖动开合 · 双击全屏</p>
-<button class="choose-video" id="chooseVideo" title="选择照片或视频，仅在本机使用"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="8" cy="9" r="1.5"/><path d="m4 17 5-5 4 4 3-3 5 5"/></svg><span>选择照片 / 视频</span></button>
+<div class="action-dock" role="group" aria-label="手机快捷操作">
+<button class="choose-video" id="chooseVideo" aria-label="选择照片 / 视频" title="选择照片或视频，仅在本机使用"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="8" cy="9" r="1.5"/><path d="m4 17 5-5 4 4 3-3 5 5"/></svg><span class="album-full">选择照片 / 视频</span><span class="album-short" aria-hidden="true">相册</span></button>
+<div class="quick-controls">
+<button class="quick-button" id="quickPlayback" aria-label="暂停画面"><span aria-hidden="true">Ⅱ</span><span>暂停</span></button>
+<button class="quick-button active" data-angle="180" aria-pressed="true">展开</button>
+<button class="quick-button" data-angle="0" aria-pressed="false">折叠</button>
+</div>
+</div>
 <p class="privacy">照片和视频只在本机使用，不会上传</p>
 <a class="repo-link" href="https://github.com/esolk/iphone-duo-fold-experience" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9z"/></svg><span class="repo-message">If you like iDuo, please give it a star on GitHub.</span><span class="repo-compact">Star on GitHub ↗</span></a>
 </div>

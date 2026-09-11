@@ -3,6 +3,8 @@
 *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--text)}button,input,select{font:inherit}button{color:inherit;cursor:pointer}button:disabled{opacity:.35;cursor:default}button,input,select,a{-webkit-tap-highlight-color:transparent;outline-offset:4px}:focus-visible{outline:2px solid var(--accent)}svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}a{color:inherit}
 .viewer{--stage-inline:0px;--stage-top:0px;--stage-bottom:0px;position:fixed;inset:0;width:100%;height:100%;height:100dvh;overflow:hidden;background:radial-gradient(ellipse at 50% 48%,#23262c 0,#14161a 45%,var(--bg) 82%);isolation:isolate}
 #screen{position:absolute;top:var(--stage-top);left:var(--stage-inline);width:calc(100% - var(--stage-inline)*2);height:calc(100% - var(--stage-top) - var(--stage-bottom));cursor:ew-resize;touch-action:pinch-zoom}
+.source-video{position:absolute;left:50%;top:50%;width:1px;height:1px;opacity:.01;pointer-events:none;z-index:-1}
+.action-dock,.quick-controls{display:flex;align-items:center;justify-content:center;gap:8px}.quick-controls{gap:6px}.quick-button{pointer-events:auto;display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:44px;min-width:54px;padding:0 13px;border:1px solid var(--line);border-radius:24px;background:#16191ddb;backdrop-filter:blur(20px);font-size:13px;white-space:nowrap}.quick-button.active{color:var(--accent);border-color:#748443;background:#26301ce8}.choose-video .album-short{display:none}
 .topbar{position:absolute;z-index:2;top:max(16px,env(safe-area-inset-top));left:max(22px,env(safe-area-inset-left));right:max(22px,env(safe-area-inset-right));display:flex;justify-content:space-between;align-items:center;pointer-events:none}
 .wordmark{display:flex;align-items:center;gap:9px;font-size:24px;font-weight:550;letter-spacing:-.8px;text-shadow:0 1px 14px #000}.wordmark svg{color:var(--accent);width:27px;height:27px}.wordmark small{font-size:14px;font-weight:400;letter-spacing:-.3px;color:var(--muted)}
 .top-actions{display:flex;gap:8px;pointer-events:auto}.icon-button{width:44px;height:44px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;border:1px solid var(--line);border-radius:50%;background:#131519b8;backdrop-filter:blur(18px);font-size:26px;color:#e5e7eb}.icon-button svg{width:20px;height:20px}
@@ -27,6 +29,8 @@
 .repo-link{display:flex;align-items:center;justify-content:center;gap:6px;font-size:12px;line-height:1.5;color:#b9c3a3;text-decoration:none;pointer-events:auto}.repo-link:hover{color:var(--accent)}.repo-link svg{width:14px;height:14px;flex-shrink:0}.repo-compact{display:none}.panel-repo{justify-content:flex-start;margin-top:18px}.immersive .stage-bottom>.repo-link{visibility:hidden}
 @media(max-height:520px) and (orientation:landscape){.stage-bottom .repo-message{display:none}.stage-bottom .repo-compact{display:inline}.stage-bottom .repo-link{gap:4px}.stage-bottom .repo-link svg{display:none}}
 @media(max-width:380px){.repo-message{max-width:280px;text-align:center}}
+@media(max-width:600px){.choose-video{padding:0 13px}.choose-video .album-full{display:none}.choose-video .album-short{display:inline}.quick-button{padding:0 11px;min-width:50px}}
+@media(max-height:520px) and (orientation:landscape){.action-dock{flex-direction:column}.quick-controls{position:fixed;right:max(14px,env(safe-area-inset-right));bottom:max(15px,env(safe-area-inset-bottom));flex-direction:column;gap:8px}.quick-button{width:72px}.choose-video .album-short{display:none}}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{transition:none!important}}
 /* Mouse/trackpad desktops get a framed stage. Touch devices retain the
    edge-to-edge mobile layout, even when a phone is rotated into landscape. */
@@ -36,5 +40,6 @@
   .stage-bottom{bottom:22px;left:12px;right:12px;width:auto;gap:10px}.gesture-hint,.privacy{font-size:13px;line-height:1.5}
   .choose-video{width:auto;height:auto;min-height:44px;padding:0 20px;font-size:14px}.choose-video span{position:static;width:auto;height:auto;clip-path:none;white-space:normal;overflow:visible}
   .stage-bottom .repo-message{display:inline}.stage-bottom .repo-compact{display:none}.stage-bottom .repo-link svg{display:block}
+  .action-dock,.quick-controls{flex-direction:row}.quick-controls{position:static}.quick-button{width:auto}
   .immersive .viewer{--stage-inline:0px;--stage-top:0px;--stage-bottom:0px}
 }

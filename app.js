@@ -6,15 +6,25 @@
   const gl = canvas.getContext('webgl', { alpha: true, antialias: false, premultipliedAlpha: false, powerPreference: 'low-power' });
   const video = document.createElement('video');
   video.muted = true;
+  video.defaultMuted = true;
   video.loop = true;
   video.playsInline = true;
   video.preload = 'auto';
   video.setAttribute('playsinline', '');
   video.setAttribute('webkit-playsinline', '');
+  video.setAttribute('x5-playsinline', '');
+  video.setAttribute('muted', '');
+  video.setAttribute('aria-hidden', 'true');
+  video.tabIndex = -1;
+  video.className = 'source-video';
+  // Keep the inline decoder in the document for mobile WebViews. The canvas
+  // remains the visible screen; this element never handles pointer input.
+  $('viewer').appendChild(video);
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const state = { angle: 180, effect: true, playing: !reducedMotion, fit: 'cover', source: 'demo', animation: null, demoTime: 0, lastTime: 0, objectURL: null, mediaGeneration: 0, frame: 0, dirty: true, textureDirty: true, videoFramePending: false, width: 0, height: 0 };
   let renderer, pointer = null, destroyed = false, photo = null, lastTap = null;
   let fallbackFullscreen = false, fullscreenBusy = false;
+  let videoWantsPlay = false, playRequest = 0, playPending = false, playbackBlocked = false;
   const settings = $('settings');
   const clamp = (x, min, max) => Math.max(min, Math.min(max, x));
   function status(text = '', isError = false) {
@@ -64,7 +74,7 @@
     if(state.playing && state.source==='demo') state.demoTime+=dt;
     if(state.animation) {
       const a=state.animation;
-      a.elapsed+=dt*Number($('speed').value);
+      a.elapsed+=dt*Number($('speed').value)*0.65;
       if(a.kind==='preset') {
         const p=clamp(a.elapsed/0.75,0,1), e=p*p*(3-2*p);
         setAngle(a.from+(a.to-a.from)*e,false);
@@ -93,7 +103,10 @@
     $('angleValue').innerHTML=`${Math.round(state.angle)}<span>°</span>`;
     $('angle').setAttribute('aria-valuetext',`${Math.round(state.angle)} 度`);
     $('viewLabel').textContent=state.angle>179?'内屏 · 完全展开':state.angle<1?'外屏 · 完全闭合':state.angle>90?'内屏 · 折叠中':'外屏 · 折叠中';
-    document.querySelectorAll('[data-angle]').forEach(b=>b.classList.toggle('active',Math.abs(Number(b.dataset.angle)-state.angle)<0.5));
+    document.querySelectorAll('[data-angle]').forEach(b=>{
+      const active=Math.abs(Number(b.dataset.angle)-state.angle)<0.5;
+      b.classList.toggle('active',active);b.setAttribute('aria-pressed',String(active));
+    });
     invalidate();
   }
   function stopAnimation(){state.animation=null; $('animateText').textContent='播放开合动画'; $('animateFold').setAttribute('aria-pressed','false');}
@@ -109,16 +122,43 @@
     $('animateText').textContent='停止动画'; $('animateFold').setAttribute('aria-pressed','true'); requestFrame();
   }
   function updatePlayback(){
-    $('playVideo').innerHTML=state.playing?'Ⅱ <span>暂停</span>':'▷ <span>播放</span>';
-    $('playVideo').setAttribute('aria-label',state.playing?'暂停画面':'播放画面');
-    $('playVideo').disabled=state.source==='image'||state.source==='loading';
-    if(state.source==='image'){$('playVideo').textContent='静态照片';$('playVideo').setAttribute('aria-label','静态照片');}
+    for(const id of ['playVideo','quickPlayback']){
+      const button=$(id),label=state.source==='image'?'静态照片':state.playing?'暂停画面':'播放画面';
+      button.innerHTML=state.playing?'<span aria-hidden="true">Ⅱ</span><span>暂停</span>':'<span aria-hidden="true">▷</span><span>播放</span>';
+      button.setAttribute('aria-label',label);button.title=label;
+      button.disabled=state.source==='image'||state.source==='loading';
+      if(state.source==='image')button.textContent='照片';
+    }
     $('muteVideo').disabled=state.source!=='video';
     $('muteVideo').innerHTML=video.muted?'♪ <span>已静音</span>':'♪ <span>有声音</span>';
     $('muteVideo').setAttribute('aria-label',video.muted?'开启视频声音':'关闭视频声音');
   }
+  async function requestVideoPlayback(){
+    if(state.source!=='video'||!videoWantsPlay)return;
+    const generation=state.mediaGeneration,request=++playRequest;
+    const current=()=>generation===state.mediaGeneration&&request===playRequest&&videoWantsPlay;
+    playPending=true;
+    try{
+      // Call play() before any await, directly from file selection or a button
+      // click, so WebViews can use that user activation while it is available.
+      await video.play();
+      if(!current())return;
+      state.playing=!video.paused;playbackBlocked=false;status();
+    }catch{
+      if(!current())return;
+      state.playing=false;playbackBlocked=true;
+      status('视频未能自动开始，请点主界面的「播放」按钮。');
+    }finally{
+      if(current()){playPending=false;updatePlayback();invalidate();}
+    }
+  }
+  function clearVideo(){
+    videoWantsPlay=false;playRequest++;playPending=false;playbackBlocked=false;
+    video.autoplay=false;video.onloadeddata=null;video.oncanplay=null;video.onerror=null;
+    video.pause();video.removeAttribute('src');video.load();
+  }
   function resetMedia(){
-    state.mediaGeneration++;video.onloadeddata=null;video.onerror=null;video.pause();video.removeAttribute('src');video.load();photo=null;
+    state.mediaGeneration++;clearVideo();photo=null;
     if(state.objectURL) URL.revokeObjectURL(state.objectURL);
     state.objectURL=null;state.source='demo';state.playing=!reducedMotion;video.muted=true;
     $('mediaName').textContent='流光 · 内置演示';$('mediaInfo').textContent='动态色彩 / 循环播放';
@@ -129,7 +169,7 @@
     const isImage=file.type.startsWith('image/')||/\.(jpe?g|png|webp|avif|gif|heic|heif|bmp)$/i.test(file.name);
     if(!isImage&&!file.type.startsWith('video/')&&!/\.(mp4|mov|m4v|webm|ogv)$/i.test(file.name)){status('请选择照片或视频，例如 JPG、PNG、MP4 或 MOV。',true);return;}
     state.mediaGeneration++;const generation=state.mediaGeneration;
-    video.onloadeddata=null;video.onerror=null;video.pause();video.removeAttribute('src');video.load();photo=null;
+    clearVideo();photo=null;
     const oldURL=state.objectURL;
     state.objectURL=URL.createObjectURL(file);state.source='loading';state.playing=false;video.muted=true;
     $('mediaName').textContent=file.name; $('mediaName').title=file.name;
@@ -153,25 +193,28 @@
       };
       image.src=state.objectURL;updatePlayback();invalidate();return;
     }
-    video.onloadeddata=async()=>{
+    // Mark a selected video before decoding so the visible play button is usable
+    // even when a WebView waits for another tap before loading the first frame.
+    state.source='video';videoWantsPlay=true;video.autoplay=true;
+    let retriedWhenReady=false;
+    video.onloadeddata=video.oncanplay=()=>{
       if(generation!==state.mediaGeneration) return;
-      state.source='video';state.textureDirty=true;
+      state.textureDirty=true;
       const seconds=Number.isFinite(video.duration)?Math.round(video.duration):0;
       $('mediaInfo').textContent=`${video.videoWidth} × ${video.videoHeight} / ${Math.floor(seconds/60)}:${String(seconds%60).padStart(2,'0')}`;
-      status();
-      try {await video.play();if(generation!==state.mediaGeneration)return;state.playing=true;}
-      catch {if(generation!==state.mediaGeneration)return;state.playing=false;status('视频已就绪，点击播放开始。');}
+      if(!playbackBlocked)status();
+      if(videoWantsPlay&&video.paused&&!playPending&&!retriedWhenReady){
+        retriedWhenReady=true;requestVideoPlayback();
+      }
       updatePlayback();invalidate();
     };
     video.onerror=()=>{
       if(generation!==state.mediaGeneration) return;
-      state.source='demo';state.playing=!reducedMotion;
-      $('mediaName').textContent='流光 · 内置演示';$('mediaInfo').textContent='所选视频无法解码';
+      resetMedia();$('mediaInfo').textContent='所选视频无法解码';
       status('浏览器无法播放此视频。请尝试 H.264 编码的 MP4，或在 Safari 中打开 HEVC 视频。',true);
-      if(state.objectURL){URL.revokeObjectURL(state.objectURL);state.objectURL=null;}
-      updatePlayback();invalidate();
     };
     video.src=state.objectURL; video.load();
+    requestVideoPlayback();
     updatePlayback();invalidate();
   }
   function watchVideoFrames(){
@@ -183,14 +226,31 @@
   $('chooseVideo').addEventListener('click',()=>$('fileInput').click());
   $('fileInput').addEventListener('change',e=>{loadMedia(e.target.files?.[0]);e.target.value='';});
   $('resetMedia').addEventListener('click',resetMedia);
-  $('playVideo').addEventListener('click',async()=>{
+  function togglePlayback(){
     if(state.source==='loading'||state.source==='image')return;
     if(state.source==='video'){
-      if(video.paused){try{await video.play();state.playing=true;status();}catch{status('视频未能播放，请重新选择其他视频。',true);}}
-      else{video.pause();state.playing=false;}
+      if(!state.playing){videoWantsPlay=true;video.autoplay=true;requestVideoPlayback();}
+      else{
+        videoWantsPlay=false;video.autoplay=false;playRequest++;playPending=false;
+        video.pause();state.playing=false;status();
+      }
     }else state.playing=!state.playing;
     state.lastTime=0;updatePlayback();invalidate();
+  }
+  $('playVideo').addEventListener('click',togglePlayback);
+  $('quickPlayback').addEventListener('click',togglePlayback);
+  for(const event of ['playing','pause','ended'])video.addEventListener(event,()=>{
+    if(state.source!=='video')return;
+    if(!videoWantsPlay&&!video.paused){video.pause();return;}
+    state.playing=!video.paused&&video.readyState>=2;
+    if(state.playing){playbackBlocked=false;status();}
+    updatePlayback();invalidate();
   });
+  // A bounded retry when WeChat finishes initializing its browser bridge.
+  // An explicit pause always wins over readiness and lifecycle events.
+  document.addEventListener('WeixinJSBridgeReady',()=>{
+    if(videoWantsPlay&&video.paused&&!playPending)requestVideoPlayback();
+  },{once:true});
   $('muteVideo').addEventListener('click',()=>{video.muted=!video.muted;updatePlayback();});
   $('fitMode').addEventListener('change',e=>{state.fit=e.target.value;invalidate();});
   $('angle').addEventListener('input',e=>setAngle(Number(e.target.value)));
@@ -274,8 +334,8 @@
   new ResizeObserver(invalidate).observe($('viewer'));
   canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();destroyed=true;if(state.frame)cancelAnimationFrame(state.frame);state.frame=0;status('图形画面暂时中断，正在等待恢复。',true);});
   canvas.addEventListener('webglcontextrestored',()=>{try{destroyed=false;initializeRenderer();watchVideoFrames();status();invalidate();}catch{status('图形画面无法恢复，请刷新页面。',true);}});
-  window.addEventListener('pagehide',()=>{video.pause();if(state.frame)cancelAnimationFrame(state.frame);state.frame=0;});
-  window.addEventListener('pageshow',()=>{state.lastTime=0;if(state.source==='video'&&state.playing)video.play().catch(()=>{state.playing=false;updatePlayback();});invalidate();});
+  window.addEventListener('pagehide',()=>{playRequest++;playPending=false;video.pause();if(state.frame)cancelAnimationFrame(state.frame);state.frame=0;});
+  window.addEventListener('pageshow',()=>{state.lastTime=0;if(videoWantsPlay&&video.paused)requestVideoPlayback();invalidate();});
   if(gl){try{initializeRenderer();watchVideoFrames();invalidate();}catch(error){console.error('Renderer initialization failed:',error);destroyed=true;$('canvasError').hidden=false;}}
   else{$('canvasError').hidden=false;}
   updatePlayback();
