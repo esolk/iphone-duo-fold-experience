@@ -1,0 +1,726 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#090a0c">
+<meta name="description" content="选择照片或视频，拖动体验折叠手机。媒体只在本机使用，不会上传。">
+<title>iDuo</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M5 7h9v20H5zM18 7l9-3v20l-9 3z' fill='none' stroke='%23d4f584' stroke-width='2'/%3E%3C/svg%3E">
+<style>@charset "UTF-8";
+:root{color-scheme:dark;--bg:#090a0c;--line:#ffffff20;--muted:#a3a7ae;--text:#f3f4f0;--accent:#d4f584;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--text)}button,input,select{font:inherit}button{color:inherit;cursor:pointer}button:disabled{opacity:.35;cursor:default}button,input,select,a{-webkit-tap-highlight-color:transparent;outline-offset:4px}:focus-visible{outline:2px solid var(--accent)}svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}a{color:inherit}
+.viewer{--stage-inline:0px;--stage-top:0px;--stage-bottom:0px;position:fixed;inset:0;width:100%;height:100%;height:100dvh;overflow:hidden;background:radial-gradient(ellipse at 50% 48%,#23262c 0,#14161a 45%,var(--bg) 82%);isolation:isolate}
+#screen{position:absolute;top:var(--stage-top);left:var(--stage-inline);width:calc(100% - var(--stage-inline)*2);height:calc(100% - var(--stage-top) - var(--stage-bottom));cursor:ew-resize;touch-action:pinch-zoom}
+.topbar{position:absolute;z-index:2;top:max(16px,env(safe-area-inset-top));left:max(22px,env(safe-area-inset-left));right:max(22px,env(safe-area-inset-right));display:flex;justify-content:space-between;align-items:center;pointer-events:none}
+.wordmark{display:flex;align-items:center;gap:9px;font-size:24px;font-weight:550;letter-spacing:-.8px;text-shadow:0 1px 14px #000}.wordmark svg{color:var(--accent);width:27px;height:27px}.wordmark small{font-size:14px;font-weight:400;letter-spacing:-.3px;color:var(--muted)}
+.top-actions{display:flex;gap:8px;pointer-events:auto}.icon-button{width:44px;height:44px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;border:1px solid var(--line);border-radius:50%;background:#131519b8;backdrop-filter:blur(18px);font-size:26px;color:#e5e7eb}.icon-button svg{width:20px;height:20px}
+.view-label{position:absolute;top:max(68px,calc(env(safe-area-inset-top) + 52px));left:max(23px,env(safe-area-inset-left));font-size:12px;color:#858b95;pointer-events:none}
+.stage-bottom{position:absolute;z-index:2;bottom:max(14px,env(safe-area-inset-bottom));left:12px;right:12px;display:flex;align-items:center;flex-direction:column;gap:9px;pointer-events:none}
+.gesture-hint{font-size:13px;color:#c0c5cd;margin:0;text-shadow:0 1px 9px #000}.choose-video{pointer-events:auto;display:flex;align-items:center;justify-content:center;gap:9px;min-height:44px;padding:0 19px;border:1px solid #ffffff29;border-radius:30px;background:#16191ddb;backdrop-filter:blur(20px);box-shadow:0 3px 22px #0004;font-size:14px;font-weight:500}.choose-video svg{width:19px;height:19px;color:var(--accent)}
+.privacy{font-size:12px;line-height:1.4;color:#999fa9;margin:0;text-shadow:0 1px 9px #000}.rotate-hint{display:none;position:absolute;top:max(82px,calc(env(safe-area-inset-top) + 63px));left:0;right:0;text-align:center;color:#c0c5cf;font-size:13px;pointer-events:none;margin:0}
+.status{position:absolute;z-index:6;left:50%;bottom:max(132px,calc(env(safe-area-inset-bottom) + 110px));transform:translateX(-50%);max-width:min(90vw,520px);width:max-content;margin:0;padding:11px 16px;border:1px solid var(--line);border-radius:12px;background:#20242cf2;color:var(--accent);font-size:14px;line-height:1.5;text-align:center;pointer-events:none}.status:empty{display:none}.status.error{color:#ffb6a8}
+.drop-cover{display:none;position:absolute;inset:12px;z-index:8;border:1px dashed var(--accent);border-radius:18px;align-items:center;justify-content:center;background:#13180cf0;color:var(--accent);font-size:21px;text-align:center;pointer-events:none}.drag-over .drop-cover{display:flex}.canvas-error{position:absolute;inset:0;align-content:center;text-align:center;padding:35px;background:#111215}.canvas-error[hidden]{display:none}
+.controls{position:fixed;left:auto;right:max(14px,env(safe-area-inset-right));top:max(14px,env(safe-area-inset-top));bottom:auto;margin:0;width:330px;max-width:calc(100vw - 28px);max-height:calc(100dvh - 28px);padding:22px;border:1px solid var(--line);border-radius:22px;background:#191b1ff5;color:var(--text);box-shadow:0 24px 100px #0009;overflow:auto;overscroll-behavior:contain;scrollbar-width:thin;backdrop-filter:blur(28px)}.controls::backdrop{background:#0004;backdrop-filter:blur(3px)}
+.panel-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:16px}.panel-heading h1{font-size:18px;letter-spacing:.3px;margin:0;font-weight:550}.panel-heading h2{font-size:15px;margin:0;font-weight:500}.panel-heading .icon-button{background:transparent;border:0;width:36px;height:36px}.panel-heading output{font-size:25px;font-weight:350;font-variant-numeric:tabular-nums}.panel-heading output span{font-size:17px;color:var(--muted)}
+.media-card{display:flex;align-items:center;gap:11px;min-width:0}.media-thumb{width:37px;height:42px;flex-shrink:0;border-radius:7px;background:linear-gradient(130deg,#77a9d1,#161b41 45%,#ecb984)}.media-info{min-width:0;flex:1;display:flex;gap:6px;flex-direction:column}.media-info strong{font-size:14px;font-weight:450;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.media-info span{font-size:12px;color:var(--muted)}.media-card .icon-button{border:0;background:none}
+.media-controls{display:flex;gap:12px;margin-top:17px}.small-button{flex:1;border:1px solid var(--line);border-radius:8px;background:#ffffff05;font-size:14px;min-height:42px}.setting-row{display:flex;justify-content:space-between;align-items:center;gap:12px;font-size:14px;margin-top:18px;color:#c7cbd2}select{border:1px solid var(--line);background:#24272e;color:var(--text);border-radius:7px;padding:8px;font-size:14px;min-height:40px}
+.divider{height:1px;background:var(--line);margin:22px 0}input[type=range]{--range:100%;display:block;width:100%;height:30px;margin:0;appearance:none;background:transparent;cursor:pointer;touch-action:none}input[type=range]::-webkit-slider-runnable-track{height:3px;background:linear-gradient(to right,var(--accent) var(--range),#35383f var(--range));border-radius:4px}input[type=range]::-webkit-slider-thumb{appearance:none;width:18px;height:18px;border-radius:50%;background:var(--accent);border:4px solid #191c16;margin-top:-7.5px;box-shadow:0 0 0 1px var(--accent)}input[type=range]::-moz-range-track{height:3px;background:#35383f}input[type=range]::-moz-range-progress{height:3px;background:var(--accent)}input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:var(--accent);border:3px solid #191c16}
+.presets{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:8px}.presets button{min-height:40px;border:1px solid var(--line);background:transparent;border-radius:8px;color:#bcc2cb;font-size:14px}.presets button.active{color:var(--accent);border-color:#748443;background:#d4f58409}.animate-button{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:44px;margin-top:14px;border:1px solid #48523c;border-radius:8px;background:#d4f5840a;font-size:14px}
+.switch-row{position:relative;display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:14px;cursor:pointer;min-height:32px}.switch-row input{position:absolute;right:0;opacity:0;width:42px;height:26px}.switch-track{width:38px;height:22px;border-radius:20px;background:#454954}.switch-track:after{content:"";display:block;width:16px;height:16px;border-radius:50%;background:#fff;margin:3px;transition:transform .2s}.switch-row input:checked+.switch-track{background:var(--accent)}.switch-row input:checked+.switch-track:after{transform:translateX(16px);background:#253017}.switch-row input:focus-visible+.switch-track{outline:2px solid var(--accent);outline-offset:4px}
+.panel-note{font-size:12px;line-height:1.6;color:var(--muted);margin:22px 0 12px}.reference{display:inline-block;font-size:12px;text-decoration:none;color:#949ba6}
+.immersive .wordmark,.immersive .view-label,.immersive .gesture-hint,.immersive .rotate-hint,.immersive .privacy{visibility:hidden}.immersive .top-actions{opacity:.65}.immersive .top-actions:hover,.immersive .top-actions:focus-within{opacity:1}
+@media(orientation:portrait) and (max-width:1000px){.rotate-hint{display:block}.view-label{display:none}.wordmark small{display:none}.topbar{left:max(14px,env(safe-area-inset-left));right:max(14px,env(safe-area-inset-right))}}
+@media(max-height:520px) and (orientation:landscape){.topbar{top:max(8px,env(safe-area-inset-top));left:max(14px,env(safe-area-inset-left));right:max(14px,env(safe-area-inset-right))}.wordmark small,.view-label{display:none}.wordmark{font-size:20px}.wordmark svg{width:23px;height:23px}.stage-bottom{bottom:max(7px,env(safe-area-inset-bottom));gap:3px}.gesture-hint,.privacy{font-size:12px}.choose-video{min-height:40px;padding:0 16px;font-size:13px}.controls{top:max(8px,env(safe-area-inset-top));max-height:calc(100dvh - 16px)}}
+@media(max-height:520px) and (orientation:landscape){.stage-bottom{left:max(10px,env(safe-area-inset-left));right:auto;width:84px;gap:12px;bottom:max(15px,env(safe-area-inset-bottom));text-align:center}.gesture-hint,.privacy{line-height:1.65}.choose-video{width:44px;height:44px;padding:0}.choose-video span{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}}
+.repo-link{display:flex;align-items:center;justify-content:center;gap:6px;font-size:12px;line-height:1.5;color:#b9c3a3;text-decoration:none;pointer-events:auto}.repo-link:hover{color:var(--accent)}.repo-link svg{width:14px;height:14px;flex-shrink:0}.repo-compact{display:none}.panel-repo{justify-content:flex-start;margin-top:18px}.immersive .stage-bottom>.repo-link{visibility:hidden}
+@media(max-height:520px) and (orientation:landscape){.stage-bottom .repo-message{display:none}.stage-bottom .repo-compact{display:inline}.stage-bottom .repo-link{gap:4px}.stage-bottom .repo-link svg{display:none}}
+@media(max-width:380px){.repo-message{max-width:280px;text-align:center}}
+@media(prefers-reduced-motion:reduce){*,*:before,*:after{transition:none!important}}
+/* Mouse/trackpad desktops get a framed stage. Touch devices retain the
+   edge-to-edge mobile layout, even when a phone is rotated into landscape. */
+@media(hover:hover) and (pointer:fine) and (min-width:760px){
+  .viewer{--stage-inline:clamp(28px,5vw,100px);--stage-top:max(88px,12vh);--stage-bottom:max(150px,20vh)}
+  .topbar{top:26px;left:32px;right:32px}.wordmark small{display:inline}.view-label{display:block;top:78px;left:33px}.rotate-hint{display:none}
+  .stage-bottom{bottom:22px;left:12px;right:12px;width:auto;gap:10px}.gesture-hint,.privacy{font-size:13px;line-height:1.5}
+  .choose-video{width:auto;height:auto;min-height:44px;padding:0 20px;font-size:14px}.choose-video span{position:static;width:auto;height:auto;clip-path:none;white-space:normal;overflow:visible}
+  .stage-bottom .repo-message{display:inline}.stage-bottom .repo-compact{display:none}.stage-bottom .repo-link svg{display:block}
+  .immersive .viewer{--stage-inline:0px;--stage-top:0px;--stage-bottom:0px}
+}
+</style>
+<script>document.addEventListener('DOMContentLoaded', () => {
+'use strict';
+
+// Both displays sample a stationary image plane. The housing is a pair of
+// rounded, extruded solids; UI is composited before the spatial frost pass.
+window.FoldRenderer = class FoldRenderer {
+  constructor(gl) {
+    this.gl = gl;
+    this.lastComposite = '';
+    const vertex = `attribute vec2 aPosition; varying vec2 vUV;
+      void main(){vUV=aPosition*.5+.5;gl_Position=vec4(aPosition,0.,1.);}`;
+    const media = `
+      uniform sampler2D uVideo;
+      uniform float uUseVideo,uTime,uAspect,uContain;
+      vec3 demo(vec2 p){
+        float t=uTime*.13;
+        float wave=p.x*.76+p.y*.33+.19*sin(p.y*3.7+t);
+        float ribbon=sin(wave*7.4-t)*.5+.5;
+        vec3 c=mix(vec3(.055,.075,.25),vec3(.29,.60,.84),smoothstep(.08,.64,ribbon));
+        c=mix(c,vec3(1.,.49,.30),smoothstep(.59,.9,ribbon));
+        c=mix(c,vec3(1.,.82,.60),pow(ribbon,10.)*.95);
+        c*=.69+.31*smoothstep(0.,.5,.5+.5*sin(wave*19.+p.y*1.4-t));
+        return c+vec3(.025,.03,.06)*sin(p.y*3.);
+      }
+      vec3 wallpaper(vec2 uv,float displayAspect){
+        if(uUseVideo<.5)return demo(uv);
+        vec2 p=uv-.5;float ratio=displayAspect/uAspect;
+        if(uContain>.5){if(ratio>1.)p.x*=ratio;else p.y/=ratio;}
+        else{if(ratio>1.)p.y/=ratio;else p.x*=ratio;}
+        vec3 color=texture2D(uVideo,clamp(p+.5,0.,1.)).rgb;
+        if(uContain>.5&&(abs(p.x)>.5||abs(p.y)>.5))color=vec3(.006);
+        return color;
+      }`;
+    const scene = `precision highp float;
+      ${media}
+      uniform vec2 uResolution;
+      uniform float uScale,uAngle,uEffect;
+      uniform sampler2D uInner,uOuter,uHUDInner,uHUDOuter;
+      const float W=250.;
+      const float H=357.142857;
+      const float T=8.;
+      const float B=8.;
+      const float R=31.;
+      const float CAMERA=1600.;
+      float box(vec2 p,vec2 b,float r){vec2 d=abs(p)-b+r;return min(max(d.x,d.y),0.)+length(max(d,0.))-r;}
+      float shape(vec2 p,float inset,bool continuous){
+        float radius=p.x>W*.5?R:1.2;
+        float d=box(p-vec2(W*.5,0.),vec2(W*.5-inset,H*.5-inset),max(.1,radius-inset));
+        // A continuous display has no vertical mask or bezel along its hinge.
+        if(continuous&&p.x<W*.5)d=abs(p.y)-(H*.5-inset);
+        return d;
+      }
+      vec3 clearContent(vec2 uv,bool outer){
+        vec3 color=wallpaper(uv,outer?(W-2.*B)/(H-2.*B):(2.*W-2.*B)/(H-2.*B));
+        vec4 hud;
+        if(outer)hud=texture2D(uHUDOuter,uv);else hud=texture2D(uHUDInner,uv);
+        return mix(color,hud.rgb,hud.a);
+      }
+      vec3 content(vec2 uv,bool outer,float blur){
+        // Endpoints sample the original video and high-resolution vector HUD.
+        // They never pass through the lower-resolution frosted image pyramid.
+        if(blur<.00001)return clearContent(uv,outer);
+        float naturalLod=log2(max(1.,1024./((H-2.*B)*uScale)));
+        float lod=log2(max(1.,blur*1024.))-naturalLod;
+        vec2 delta=vec2(blur*(outer?1.46:.70),blur)*.36;
+        if(outer){
+          vec3 c=texture2D(uOuter,uv,lod).rgb*.4;
+          c+=(texture2D(uOuter,uv+vec2(delta.x,0.),lod).rgb+texture2D(uOuter,uv-vec2(delta.x,0.),lod).rgb)*.15;
+          c+=(texture2D(uOuter,uv+vec2(0.,delta.y),lod).rgb+texture2D(uOuter,uv-vec2(0.,delta.y),lod).rgb)*.15;
+          if(blur<.0015)c=mix(clearContent(uv,true),c,smoothstep(0.,.0015,blur));
+          return c;
+        }
+        vec3 c=texture2D(uInner,uv,lod).rgb*.4;
+        c+=(texture2D(uInner,uv+vec2(delta.x,0.),lod).rgb+texture2D(uInner,uv-vec2(delta.x,0.),lod).rgb)*.15;
+        c+=(texture2D(uInner,uv+vec2(0.,delta.y),lod).rgb+texture2D(uInner,uv-vec2(0.,delta.y),lod).rgb)*.15;
+        if(blur<.0015)c=mix(clearContent(uv,false),c,smoothstep(0.,.0015,blur));
+        return c;
+      }
+      vec3 face(vec2 p,vec3 world,bool moving,bool outer,float sn){
+        bool continuous=!outer;
+        float edge=shape(p,0.,continuous);
+        float rimLight=.43+.20*cos(p.y/H*5.+p.x/W*1.5);
+        vec3 metal=vec3(.87,.92,1.)*rimLight;
+        // Thin polished lip and graphite glass border, measured from the video.
+        vec3 color=metal;
+        if(edge< -.85)color=vec3(.10,.115,.13)+vec3(.13)*exp(-pow((edge+1.8)*1.1,2.));
+        if(edge< -2.8)color=vec3(.015,.018,.021);
+        float se=shape(p,B,continuous);
+        float aa=.7/uScale;
+        if(se<aa){
+          vec2 projectedPoint=world.xy*CAMERA/(CAMERA-world.z);
+          vec2 halfSize=outer?vec2(W*.5-B,H*.5-B):vec2(W-B,H*.5-B);
+          vec2 origin=outer?vec2(W*.5,0.):vec2(0.);
+          vec2 localImage=outer?vec2(p.x-W*.5,p.y):vec2(moving?-p.x:p.x,p.y);
+          float opening=abs(sn);
+          // The back surface has physical depth; suppress its tiny perspective
+          // offset at closure so the settled cover fills the display exactly.
+          float projection=uEffect*(outer?smoothstep(0.,.035,opening):1.);
+          vec2 imagePoint=mix(localImage,projectedPoint-origin,projection);
+          vec2 uv=imagePoint/(2.*halfSize)*vec2(1.,-1.)+.5;
+          float angleBlur=pow(opening,.8)*smoothstep(0.,.04,opening);
+          // Linear in distance from the hinge, in display space (not UV space).
+          float blur=moving?uEffect*.045*angleBlur*clamp(p.x/W,0.,1.):0.;
+          vec3 picture=content(clamp(uv,0.,1.),outer,blur);
+          // Anchor the lateral mask to the glass. A stationary x cutoff pulls
+          // away from the hinge as the thick cover rotates, creating a gap.
+          vec2 maskPoint=vec2(localImage.x,imagePoint.y);
+          float imageRadius=outer?(maskPoint.x<0.?1.:R-B):R-B;
+          float projectionEdge=box(maskPoint,halfSize,imageRadius);
+          // Frost diffuses picture light into the projected dark margin. Its
+          // mask has the same spatial blur footprint as the image, rather than
+          // cutting the already-blurred image off with a sharp black polygon.
+          float diffusion=max(.65,blur*(H-2.*B)*2.6);
+          float projectionMask=1.-smoothstep(-diffusion,diffusion,projectionEdge);
+          picture*=projectionMask;
+          float glass=blur/.045;
+          picture=mix(picture,picture*.89+vec3(.055,.06,.065)*projectionMask,glass*.40);
+          // Smooth, restrained edge shading remains inside the projected image.
+          float sideShade=moving?.18*uEffect*angleBlur*pow(p.x/W,2.):0.;
+          picture*=1.-sideShade;
+          color=mix(color,picture,1.-smoothstep(-aa,aa,se));
+          if(outer){
+            // This is physical hardware, so the camera never enters the blur pass.
+            vec2 lens=p-vec2(W-31.,H*.5-31.);
+            float d=length(lens);
+            vec3 lensColor=vec3(.008,.010,.014);
+            lensColor+=vec3(.025,.033,.055)*exp(-pow((d-3.7)*.8,2.));
+            lensColor+=vec3(.065,.078,.115)*exp(-dot(lens-vec2(-1.7,2.0),lens-vec2(-1.7,2.0))*.6);
+            color=mix(color,lensColor,1.-smoothstep(8.5,9.1,d));
+          }
+        }
+        return color;
+      }
+      vec3 side(vec3 p,vec3 n,bool moving){
+        float depth=clamp(-p.z/T,0.,1.);
+        float band=.14+.32*pow(.5+.5*cos(depth*6.283-1.2),3.);
+        band+=.32*exp(-pow((depth-.10)*25.,2.));
+        band+=.22*exp(-pow((depth-.90)*24.,2.));
+        float reflect=.55+.45*abs(n.x*.8+n.y*.3);
+        vec3 color=vec3(.86,.91,.96)*band*reflect;
+        float antenna=1.-smoothstep(1.25,1.8,abs(abs(p.y)-H*.39));
+        if(p.x>W-5.)color=mix(color,vec3(.39,.42,.44),antenna*.85);
+        // A side-key inset on the stationary body's outside rail.
+        if(!moving&&p.x>W-.2&&p.y>38.&&p.y<77.&&depth>.22&&depth<.78)color*=.48;
+        return color;
+      }
+      void candidate(float t,vec3 n,vec3 o,vec3 d,inout float nearest,inout vec3 hitNormal){
+        if(t<=.0001||t>=nearest)return;
+        vec3 p=o+d*t;
+        if(p.z< -T-.001||p.z>.001)return;
+        if(p.x<-.001||p.x>W+.001||abs(p.y)>H*.5+.001)return;
+        // Plane portions exclude rounded corners, which the cylinders handle.
+        float rr=p.x>W*.5?R:1.2;
+        if(abs(n.x)>.5&&abs(p.y)>H*.5-rr)return;
+        if(abs(n.y)>.5&&(p.x<1.2||p.x>W-R))return;
+        nearest=t;hitNormal=n;
+      }
+      vec4 trace(vec3 eye,vec3 ray,vec3 axis,vec3 normal,vec3 hinge,bool moving,float sn,out float distance){
+        vec3 delta=eye-hinge;
+        vec3 o=vec3(dot(delta,axis),delta.y,dot(delta,normal));
+        vec3 d=vec3(dot(ray,axis),ray.y,dot(ray,normal));
+        float nearest=10000.;vec3 hitNormal=vec3(0.);
+        bool outer=moving&&d.z>0.;
+        float coverage=1.;
+        if(abs(d.z)>.00001){
+          float z=d.z<0.?0.:-T;
+          float t=(z-o.z)/d.z;
+          vec3 p=o+d*t;
+          float edge=shape(p.xy,0.,!outer);
+          if(t>.0001&&p.x>=0.&&p.x<=W+.7/uScale&&edge<.7/uScale){
+            nearest=t;hitNormal=vec3(0.,0.,d.z<0.?1.:-1.);
+            coverage=1.-smoothstep(-.7/uScale,.7/uScale,edge);
+          }
+        }
+        float faceDistance=nearest;
+        if(abs(d.x)>.00001){
+          candidate(-o.x/d.x,vec3(-1.,0.,0.),o,d,nearest,hitNormal);
+          candidate((W-o.x)/d.x,vec3(1.,0.,0.),o,d,nearest,hitNormal);
+        }
+        if(abs(d.y)>.00001){
+          candidate((H*.5-o.y)/d.y,vec3(0.,1.,0.),o,d,nearest,hitNormal);
+          candidate((-H*.5-o.y)/d.y,vec3(0.,-1.,0.),o,d,nearest,hitNormal);
+        }
+        // Four extruded quarter-circles close the rail around its rounded corners.
+        float qa=dot(d.xy,d.xy);
+        for(int ix=0;ix<2;ix++)for(int iy=0;iy<2;iy++){
+          float sx=ix==0?-1.:1.,sy=iy==0?-1.:1.;
+          float r=ix==0?1.2:R;
+          vec2 center=vec2(ix==0?r:W-r,sy*(H*.5-r));
+          vec2 off=o.xy-center;
+          float qb=dot(off,d.xy),qc=dot(off,off)-r*r;
+          float discriminant=qb*qb-qa*qc;
+          if(qa>.00001&&discriminant>=0.){
+            float t=(-qb-sqrt(discriminant))/qa;
+            vec3 p=o+d*t;
+            vec2 q=p.xy-center;
+            if(t>.0001&&t<nearest&&p.z>=-T&&p.z<=0.&&q.x*sx>=0.&&q.y*sy>=0.){
+              nearest=t;hitNormal=vec3(q/r,0.);
+            }
+          }
+        }
+        distance=nearest;
+        if(nearest>9999.)return vec4(0.);
+        vec3 p=o+d*nearest;
+        if(abs(hitNormal.z)>.5){
+          return vec4(face(p.xy,eye+ray*nearest,moving,outer,sn),coverage);
+        }
+        return vec4(side(p,hitNormal,moving),1.);
+      }
+      void main(){
+        float q=(180.-uAngle)*.01745329252;
+        float c=cos(q),sn=sin(q);
+        float center=W*.5*(1.-max(c,0.));
+        vec2 pixel=(gl_FragCoord.xy-uResolution*.5)/uScale;pixel.y-=3.;
+        vec3 eye=vec3(0.,0.,CAMERA),ray=vec3(pixel.x+center,pixel.y,-CAMERA);
+        float fixedDistance,movingDistance;
+        vec4 base=trace(eye,ray,vec3(1.,0.,0.),vec3(0.,0.,1.),vec3(0.),false,sn,fixedDistance);
+        vec4 cover=trace(eye,ray,vec3(-c,0.,sn),vec3(sn,0.,c),vec3(0.,0.,.45*(1.-c)),true,sn,movingDistance);
+        vec4 front=movingDistance<fixedDistance?cover:base;
+        vec4 back=movingDistance<fixedDistance?base:cover;
+        float alpha=front.a+back.a*(1.-front.a);
+        vec3 color=(front.rgb*front.a+back.rgb*back.a*(1.-front.a))/max(alpha,.0001);
+        gl_FragColor=vec4(color,alpha);
+      }`;
+    const compose = `precision highp float; varying vec2 vUV;
+      ${media}
+      uniform sampler2D uHUD;
+      uniform float uDisplayAspect;
+      void main(){
+        vec3 color=wallpaper(vUV,uDisplayAspect);
+        vec4 hud=texture2D(uHUD,vUV);
+        gl_FragColor=vec4(mix(color,hud.rgb,hud.a),1.);
+      }`;
+    this.main = this.program(vertex,scene,['Resolution','Scale','Angle','Effect','Inner','Outer','Video','HUDInner','HUDOuter','UseVideo','Time','Aspect','Contain']);
+    this.compose = this.program(vertex,compose,['Video','HUD','UseVideo','Time','Aspect','DisplayAspect','Contain']);
+    this.buffer=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,this.buffer);
+    gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,-1,1,1,-1,1,1]),gl.STATIC_DRAW);
+    this.video=this.makeTexture(0,1,1,false);
+    this.inner=this.makeTexture(1,1024,1024,true);
+    this.outer=this.makeTexture(2,512,1024,true);
+    this.hudInner=this.makeTexture(3,2048,1450,false,this.hud(false));
+    this.hudOuter=this.makeTexture(4,1024,1450,false,this.hud(true));
+    this.framebuffer=gl.createFramebuffer();
+  }
+  program(vertex,fragment,names){
+    const gl=this.gl,p=gl.createProgram();
+    for(const [type,source] of [[gl.VERTEX_SHADER,vertex],[gl.FRAGMENT_SHADER,fragment]]){
+      const shader=gl.createShader(type);gl.shaderSource(shader,source);gl.compileShader(shader);
+      if(!gl.getShaderParameter(shader,gl.COMPILE_STATUS))throw Error(gl.getShaderInfoLog(shader));
+      gl.attachShader(p,shader);gl.deleteShader(shader);
+    }
+    gl.bindAttribLocation(p,0,'aPosition');gl.linkProgram(p);
+    if(!gl.getProgramParameter(p,gl.LINK_STATUS))throw Error(gl.getProgramInfoLog(p));
+    return {program:p,uniforms:Object.fromEntries(names.map(n=>[n,gl.getUniformLocation(p,'u'+n)]))};
+  }
+  makeTexture(unit,w,h,mip,source){
+    const gl=this.gl,texture=gl.createTexture();gl.activeTexture(gl.TEXTURE0+unit);gl.bindTexture(gl.TEXTURE_2D,texture);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,mip?gl.LINEAR_MIPMAP_LINEAR:gl.LINEAR);
+    if(source)gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,source);
+    else gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,w,h,0,gl.RGBA,gl.UNSIGNED_BYTE,null);
+    if(mip)gl.generateMipmap(gl.TEXTURE_2D);
+    return {texture,unit,w,h};
+  }
+  hud(outer){
+    const c=document.createElement('canvas');c.width=outer?1024:2048;c.height=1450;
+    const ctx=c.getContext('2d'),h=341.142857,w=outer?234:484;
+    ctx.scale(c.width/w,c.height/h);ctx.strokeStyle='#fff';ctx.fillStyle='#fff';ctx.lineCap='round';ctx.lineJoin='round';
+    const textX=outer?w*.44:w*.5;
+    ctx.textAlign='center';ctx.font='500 9.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
+    ctx.globalAlpha=.90;ctx.fillText('Wed Apr 1',textX,h*.083);
+    // Dedicated condensed clock outlines: consistent on Windows and iOS,
+    // without squeezing a platform UI font or rescaling rasterized letters.
+    ctx.save();ctx.translate(textX-57,h*.12);ctx.globalAlpha=.97;
+    ctx.lineWidth=8.1;ctx.lineCap='butt';ctx.lineJoin='round';
+    ctx.stroke(new Path2D('M 4.5 67 L 4.5 75 C 4.5 94 30.5 94 30.5 75 L 30.5 18 C 30.5 -1 4.5 -1 4.5 18 L 4.5 39 C 4.5 58 30.5 58 30.5 39'));
+    ctx.stroke(new Path2D('M 82 5 L 62 72 L 92 72 M 82 5 L 82 92 M 97 15 L 111 5 L 111 92'));
+    for(const y of [28,68]){ctx.beginPath();ctx.arc(45,y,5.1,0,Math.PI*2);ctx.fill();}
+    ctx.restore();
+    const x=w-h*.073;
+    {
+      const y=h*(outer?.162:.076),r=h*.027;
+      ctx.globalAlpha=.96;ctx.lineWidth=1.25;ctx.beginPath();ctx.arc(x,y,r,Math.PI*.78,Math.PI*2.22);ctx.stroke();
+      for(let i=0;i<5;i++){const a=Math.PI*.25+i*Math.PI*.125;ctx.beginPath();ctx.arc(x+Math.cos(a)*r,y+Math.sin(a)*r,.70,0,Math.PI*2);ctx.fill();}
+      for(const radius of [4.5,2.8]){ctx.lineWidth=.9;ctx.beginPath();ctx.arc(x,y+2,radius,Math.PI*1.20,Math.PI*1.80);ctx.stroke();}
+      ctx.beginPath();ctx.arc(x,y+1.8,.8,0,Math.PI*2);ctx.fill();
+    }
+    const roundRect=(x,y,w,h,r)=>{ctx.beginPath();ctx.roundRect(x,y,w,h,r);};
+    for(const [kind,y] of [['flash',h*.81],['camera',h*.915]]){
+      const r=h*.0355;ctx.globalAlpha=.19;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();
+      ctx.globalAlpha=.36;ctx.lineWidth=.55;ctx.stroke();ctx.globalAlpha=.97;
+      if(kind==='flash'){
+        roundRect(x-2.0,y-2.8,4,8.5,1);ctx.fill();
+        ctx.beginPath();ctx.moveTo(x-3.1,y-5);ctx.lineTo(x+3.1,y-5);ctx.lineTo(x+2,y-2.5);ctx.lineTo(x-2,y-2.5);ctx.closePath();ctx.fill();
+        roundRect(x-3.2,y-6.6,6.4,1,0.4);ctx.fill();
+        ctx.globalCompositeOperation='destination-out';roundRect(x-.55,y-.6,1.1,2.8,.5);ctx.fill();ctx.globalCompositeOperation='source-over';
+      }else{
+        roundRect(x-5.5,y-3.6,11,8,1.6);ctx.fill();roundRect(x-2.8,y-5.0,5.5,2,1);ctx.fill();
+        ctx.globalCompositeOperation='destination-out';ctx.beginPath();ctx.arc(x,y+.3,2.7,0,Math.PI*2);ctx.fill();ctx.globalCompositeOperation='source-over';
+        ctx.lineWidth=1;ctx.beginPath();ctx.arc(x,y+.3,2,0,Math.PI*2);ctx.stroke();
+        ctx.beginPath();ctx.arc(x+3.6,y-1.9,.55,0,Math.PI*2);ctx.fill();
+      }
+    }
+    ctx.globalAlpha=.95;const bar=outer?h*.25:h*.40;
+    roundRect(w*.5-bar*.5,h*.981-1.1,bar,2.2,1.1);ctx.fill();
+    return c;
+  }
+  use(p){const gl=this.gl;gl.useProgram(p.program);gl.bindBuffer(gl.ARRAY_BUFFER,this.buffer);gl.enableVertexAttribArray(0);gl.vertexAttribPointer(0,2,gl.FLOAT,false,0,0);}
+  render(s){
+    const gl=this.gl;
+    if(s.ready&&s.textureDirty){gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,this.video.texture);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,s.media);}
+    const key=`${s.ready}/${s.fit}/${s.mediaWidth}/${s.mediaHeight}/${s.ready?0:s.demoTime}`;
+    if(s.textureDirty||key!==this.lastComposite){
+      this.use(this.compose);const u=this.compose.uniforms;
+      gl.uniform1i(u.Video,0);gl.uniform1f(u.UseVideo,s.ready?1:0);gl.uniform1f(u.Time,s.demoTime);
+      gl.uniform1f(u.Aspect,s.ready?s.mediaWidth/s.mediaHeight:1.4);gl.uniform1f(u.Contain,s.fit==='contain'?1:0);
+      gl.bindFramebuffer(gl.FRAMEBUFFER,this.framebuffer);
+      for(const [target,hud,aspect] of [[this.inner,this.hudInner,484/341.142857],[this.outer,this.hudOuter,234/341.142857]]){
+        gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.COLOR_ATTACHMENT0,gl.TEXTURE_2D,target.texture,0);
+        if(gl.checkFramebufferStatus(gl.FRAMEBUFFER)!==gl.FRAMEBUFFER_COMPLETE)throw Error('Display buffer unavailable');
+        gl.viewport(0,0,target.w,target.h);gl.uniform1i(u.HUD,hud.unit);gl.uniform1f(u.DisplayAspect,aspect);gl.drawArrays(gl.TRIANGLES,0,6);
+        gl.activeTexture(gl.TEXTURE0+target.unit);gl.bindTexture(gl.TEXTURE_2D,target.texture);gl.generateMipmap(gl.TEXTURE_2D);
+      }
+      gl.bindFramebuffer(gl.FRAMEBUFFER,null);this.lastComposite=key;
+    }
+    this.use(this.main);const u=this.main.uniforms;gl.viewport(0,0,s.width,s.height);
+    gl.uniform2f(u.Resolution,s.width,s.height);gl.uniform1f(u.Scale,s.scale);gl.uniform1f(u.Angle,s.angle);gl.uniform1f(u.Effect,s.effect?1:0);
+    gl.uniform1i(u.Inner,1);gl.uniform1i(u.Outer,2);gl.uniform1i(u.Video,0);
+    gl.uniform1i(u.HUDInner,3);gl.uniform1i(u.HUDOuter,4);
+    gl.uniform1f(u.UseVideo,s.ready?1:0);gl.uniform1f(u.Time,s.demoTime);
+    gl.uniform1f(u.Aspect,s.ready?s.mediaWidth/s.mediaHeight:1.4);
+    gl.uniform1f(u.Contain,s.fit==='contain'?1:0);gl.drawArrays(gl.TRIANGLES,0,6);
+  }
+};
+
+'use strict';
+
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const canvas = $('screen');
+  const gl = canvas.getContext('webgl', { alpha: true, antialias: false, premultipliedAlpha: false, powerPreference: 'low-power' });
+  const video = document.createElement('video');
+  video.muted = true;
+  video.loop = true;
+  video.playsInline = true;
+  video.preload = 'auto';
+  video.setAttribute('playsinline', '');
+  video.setAttribute('webkit-playsinline', '');
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const state = { angle: 180, effect: true, playing: !reducedMotion, fit: 'cover', source: 'demo', animation: null, demoTime: 0, lastTime: 0, objectURL: null, mediaGeneration: 0, frame: 0, dirty: true, textureDirty: true, videoFramePending: false, width: 0, height: 0 };
+  let renderer, pointer = null, destroyed = false, photo = null, lastTap = null;
+  let fallbackFullscreen = false, fullscreenBusy = false;
+  const settings = $('settings');
+  const clamp = (x, min, max) => Math.max(min, Math.min(max, x));
+  function status(text = '', isError = false) {
+    $('status').textContent = text;
+    $('status').classList.toggle('error', isError);
+  }
+  function initializeRenderer() { renderer = new window.FoldRenderer(gl); state.textureDirty = true; }
+  function render() {
+    if (!gl || destroyed) return;
+    const bounds = canvas.getBoundingClientRect();
+    if (!bounds.width || !bounds.height) return;
+    // Keep native detail on Retina displays without an unbounded drawing buffer.
+    const dpr = Math.min(window.devicePixelRatio || 1, 3, Math.sqrt(4000000/(bounds.width*bounds.height)));
+    const width = Math.round(bounds.width*dpr), height = Math.round(bounds.height*dpr);
+    if (canvas.width !== width || canvas.height !== height) { canvas.width=width; canvas.height=height; }
+    state.width=width; state.height=height;
+    const isVideo=state.source==='video';
+    const ready=(isVideo&&video.readyState>=2)||(state.source==='image'&&!!photo);
+    const media=isVideo?video:photo;
+    const mediaWidth=ready?(isVideo?video.videoWidth:(media.naturalWidth||media.width)):0;
+    const mediaHeight=ready?(isVideo?video.videoHeight:(media.naturalHeight||media.height)):0;
+    const textureDirty=state.textureDirty || (isVideo && ready && !('requestVideoFrameCallback' in video) && !video.paused);
+    // Fit the actual projected silhouette, including its depth. This gives
+    // portrait and landscape devices the largest view without clipping corners.
+    const q=(180-state.angle)*Math.PI/180,c=Math.cos(q),sn=Math.sin(q);
+    const center=125*(1-Math.max(c,0));
+    let extentX=0,extentY=0;
+    for(const moving of [false,true])for(const x of [0,250])for(const z of [0,-8]){
+      const wx=moving?-c*x+sn*z:x;
+      const wz=moving?sn*x+c*z+.45*(1-c):z;
+      const perspective=1600/(1600-wz);
+      extentX=Math.max(extentX,Math.abs(wx*perspective-center));
+      extentY=Math.max(extentY,178.572*perspective);
+    }
+    const scale=Math.max(.05,Math.min((bounds.width-24)/(2*extentX),(bounds.height-28)/(2*extentY+6)))*dpr;
+    renderer.render({ width,height,scale,
+      angle:state.angle,effect:state.effect,demoTime:state.demoTime,fit:state.fit,media,mediaWidth,mediaHeight,ready,textureDirty });
+    state.textureDirty=false; state.dirty=false;
+  }
+  function requestFrame() {
+    if(!state.frame && !destroyed && !document.hidden) state.frame=requestAnimationFrame(tick);
+  }
+  function tick(now) {
+    state.frame=0;
+    const dt=Math.min((now-(state.lastTime || now))/1000,0.05);
+    state.lastTime=now;
+    if(state.playing && state.source==='demo') state.demoTime+=dt;
+    if(state.animation) {
+      const a=state.animation;
+      a.elapsed+=dt*Number($('speed').value);
+      if(a.kind==='preset') {
+        const p=clamp(a.elapsed/0.75,0,1), e=p*p*(3-2*p);
+        setAngle(a.from+(a.to-a.from)*e,false);
+        if(p===1) stopAnimation();
+      } else {
+        // Open -> fold -> brief hold -> unfold -> settle. Reversible at any frame.
+        const t=a.elapsed;
+        let angle;
+        if(t<0.55) angle=180;
+        else if(t<2.9) {const p=(t-0.55)/2.35;angle=180*(1-p*p*(3-2*p));}
+        else if(t<3.55) angle=0;
+        else if(t<6.25) {const p=(t-3.55)/2.7;angle=180*p*p*(3-2*p);}
+        else {angle=180; stopAnimation();}
+        setAngle(angle,false);
+      }
+    }
+    if(state.dirty || state.playing || state.animation) render();
+    if(state.animation || (state.playing && state.source==='demo') || (state.source==='video' && !video.paused && !('requestVideoFrameCallback' in video))) requestFrame();
+  }
+  function invalidate(){state.dirty=true;requestFrame();}
+  function setAngle(angle, cancel = true) {
+    if(cancel) stopAnimation();
+    state.angle=clamp(angle,0,180);
+    $('angle').value=String(state.angle);
+    $('angle').style.setProperty('--range',`${state.angle/1.8}%`);
+    $('angleValue').innerHTML=`${Math.round(state.angle)}<span>°</span>`;
+    $('angle').setAttribute('aria-valuetext',`${Math.round(state.angle)} 度`);
+    $('viewLabel').textContent=state.angle>179?'内屏 · 完全展开':state.angle<1?'外屏 · 完全闭合':state.angle>90?'内屏 · 折叠中':'外屏 · 折叠中';
+    document.querySelectorAll('[data-angle]').forEach(b=>b.classList.toggle('active',Math.abs(Number(b.dataset.angle)-state.angle)<0.5));
+    invalidate();
+  }
+  function stopAnimation(){state.animation=null; $('animateText').textContent='播放开合动画'; $('animateFold').setAttribute('aria-pressed','false');}
+  function animatePreset(to) {
+    stopAnimation();
+    if(reducedMotion){setAngle(to);return;}
+    state.animation={kind:'preset',from:state.angle,to,elapsed:0};state.lastTime=0;requestFrame();
+  }
+  function playFold() {
+    if(state.animation?.kind==='cycle'){stopAnimation();return;}
+    setAngle(180);
+    state.animation={kind:'cycle',elapsed:0};state.lastTime=0;
+    $('animateText').textContent='停止动画'; $('animateFold').setAttribute('aria-pressed','true'); requestFrame();
+  }
+  function updatePlayback(){
+    $('playVideo').innerHTML=state.playing?'Ⅱ <span>暂停</span>':'▷ <span>播放</span>';
+    $('playVideo').setAttribute('aria-label',state.playing?'暂停画面':'播放画面');
+    $('playVideo').disabled=state.source==='image'||state.source==='loading';
+    if(state.source==='image'){$('playVideo').textContent='静态照片';$('playVideo').setAttribute('aria-label','静态照片');}
+    $('muteVideo').disabled=state.source!=='video';
+    $('muteVideo').innerHTML=video.muted?'♪ <span>已静音</span>':'♪ <span>有声音</span>';
+    $('muteVideo').setAttribute('aria-label',video.muted?'开启视频声音':'关闭视频声音');
+  }
+  function resetMedia(){
+    state.mediaGeneration++;video.onloadeddata=null;video.onerror=null;video.pause();video.removeAttribute('src');video.load();photo=null;
+    if(state.objectURL) URL.revokeObjectURL(state.objectURL);
+    state.objectURL=null;state.source='demo';state.playing=!reducedMotion;video.muted=true;
+    $('mediaName').textContent='流光 · 内置演示';$('mediaInfo').textContent='动态色彩 / 循环播放';
+    $('mediaThumb').style.backgroundImage='';status();updatePlayback();invalidate();
+  }
+  function loadMedia(file){
+    if(!file) return;
+    const isImage=file.type.startsWith('image/')||/\.(jpe?g|png|webp|avif|gif|heic|heif|bmp)$/i.test(file.name);
+    if(!isImage&&!file.type.startsWith('video/')&&!/\.(mp4|mov|m4v|webm|ogv)$/i.test(file.name)){status('请选择照片或视频，例如 JPG、PNG、MP4 或 MOV。',true);return;}
+    state.mediaGeneration++;const generation=state.mediaGeneration;
+    video.onloadeddata=null;video.onerror=null;video.pause();video.removeAttribute('src');video.load();photo=null;
+    const oldURL=state.objectURL;
+    state.objectURL=URL.createObjectURL(file);state.source='loading';state.playing=false;video.muted=true;
+    $('mediaName').textContent=file.name; $('mediaName').title=file.name;
+    $('mediaInfo').textContent='正在读取…';status('正在本机读取，不会上传…');
+    if(oldURL)URL.revokeObjectURL(oldURL);
+    if(isImage){
+      const image=new Image();image.decoding='async';
+      image.onload=()=>{
+        if(generation!==state.mediaGeneration)return;
+        const limit=Math.min(gl?gl.getParameter(gl.MAX_TEXTURE_SIZE):4096,8192);
+        const ratio=Math.min(1,limit/Math.max(image.naturalWidth,image.naturalHeight));
+        photo=image;
+        if(ratio<1){const resized=document.createElement('canvas');resized.width=Math.round(image.naturalWidth*ratio);resized.height=Math.round(image.naturalHeight*ratio);resized.getContext('2d').drawImage(image,0,0,resized.width,resized.height);photo=resized;}
+        state.source='image';state.playing=false;state.textureDirty=true;
+        $('mediaInfo').textContent=`${image.naturalWidth} × ${image.naturalHeight} / 照片`;
+        status();updatePlayback();invalidate();
+      };
+      image.onerror=()=>{
+        if(generation!==state.mediaGeneration)return;
+        resetMedia();status('浏览器无法读取这张照片，请尝试 JPG、PNG 或 WebP。',true);
+      };
+      image.src=state.objectURL;updatePlayback();invalidate();return;
+    }
+    video.onloadeddata=async()=>{
+      if(generation!==state.mediaGeneration) return;
+      state.source='video';state.textureDirty=true;
+      const seconds=Number.isFinite(video.duration)?Math.round(video.duration):0;
+      $('mediaInfo').textContent=`${video.videoWidth} × ${video.videoHeight} / ${Math.floor(seconds/60)}:${String(seconds%60).padStart(2,'0')}`;
+      status();
+      try {await video.play();if(generation!==state.mediaGeneration)return;state.playing=true;}
+      catch {if(generation!==state.mediaGeneration)return;state.playing=false;status('视频已就绪，点击播放开始。');}
+      updatePlayback();invalidate();
+    };
+    video.onerror=()=>{
+      if(generation!==state.mediaGeneration) return;
+      state.source='demo';state.playing=!reducedMotion;
+      $('mediaName').textContent='流光 · 内置演示';$('mediaInfo').textContent='所选视频无法解码';
+      status('浏览器无法播放此视频。请尝试 H.264 编码的 MP4，或在 Safari 中打开 HEVC 视频。',true);
+      if(state.objectURL){URL.revokeObjectURL(state.objectURL);state.objectURL=null;}
+      updatePlayback();invalidate();
+    };
+    video.src=state.objectURL; video.load();
+    updatePlayback();invalidate();
+  }
+  function watchVideoFrames(){
+    if(!('requestVideoFrameCallback' in video)||state.videoFramePending||destroyed)return;
+    state.videoFramePending=true;
+    video.requestVideoFrameCallback(()=>{state.videoFramePending=false;state.textureDirty=true;invalidate();if(!destroyed)watchVideoFrames();});
+  }
+
+  $('chooseVideo').addEventListener('click',()=>$('fileInput').click());
+  $('fileInput').addEventListener('change',e=>{loadMedia(e.target.files?.[0]);e.target.value='';});
+  $('resetMedia').addEventListener('click',resetMedia);
+  $('playVideo').addEventListener('click',async()=>{
+    if(state.source==='loading'||state.source==='image')return;
+    if(state.source==='video'){
+      if(video.paused){try{await video.play();state.playing=true;status();}catch{status('视频未能播放，请重新选择其他视频。',true);}}
+      else{video.pause();state.playing=false;}
+    }else state.playing=!state.playing;
+    state.lastTime=0;updatePlayback();invalidate();
+  });
+  $('muteVideo').addEventListener('click',()=>{video.muted=!video.muted;updatePlayback();});
+  $('fitMode').addEventListener('change',e=>{state.fit=e.target.value;invalidate();});
+  $('angle').addEventListener('input',e=>setAngle(Number(e.target.value)));
+  document.querySelectorAll('[data-angle]').forEach(b=>b.addEventListener('click',()=>animatePreset(Number(b.dataset.angle))));
+  $('animateFold').addEventListener('click',playFold);
+  $('glassEffect').addEventListener('change',e=>{state.effect=e.target.checked;invalidate();});
+  // Recognize a double tap on pointer-up, inside the user activation window.
+  // A drag, long press or second finger cancels tap recognition.
+  canvas.addEventListener('pointerdown',e=>{
+    if(!e.isPrimary){pointer=null;lastTap=null;return;}
+    if(e.button!==0)return;
+    stopAnimation();pointer={id:e.pointerId,x:e.clientX,y:e.clientY,time:performance.now(),angle:state.angle,moved:false};canvas.setPointerCapture(e.pointerId);
+  });
+  canvas.addEventListener('pointermove',e=>{
+    if(pointer?.id!==e.pointerId)return;
+    if(Math.hypot(e.clientX-pointer.x,e.clientY-pointer.y)>8)pointer.moved=true;
+    if(pointer.moved){lastTap=null;setAngle(pointer.angle-(e.clientX-pointer.x)*180/(canvas.clientWidth*.65));}
+  });
+  canvas.addEventListener('pointerup',e=>{
+    if(pointer?.id!==e.pointerId)return;
+    const p=pointer,now=performance.now();pointer=null;
+    if(p.moved||now-p.time>350){lastTap=null;return;}
+    if(lastTap&&now-lastTap.time<320&&Math.hypot(e.clientX-lastTap.x,e.clientY-lastTap.y)<26){lastTap=null;toggleFullscreen();}
+    else lastTap={x:e.clientX,y:e.clientY,time:now};
+  });
+  canvas.addEventListener('pointercancel',()=>{pointer=null;lastTap=null;});
+  canvas.addEventListener('lostpointercapture',()=>{pointer=null;});
+  canvas.addEventListener('keydown',e=>{
+    if(e.key==='ArrowLeft'||e.key==='ArrowRight'){e.preventDefault();setAngle(state.angle+(e.key==='ArrowLeft'?-1:1)*(e.shiftKey?15:3));}
+    else if(e.key==='Home'){e.preventDefault();setAngle(0);}
+    else if(e.key==='End'){e.preventDefault();setAngle(180);}
+    else if(e.code==='Space'){e.preventDefault();playFold();}
+    else if(e.key.toLowerCase()==='f'){e.preventDefault();toggleFullscreen();}
+  });
+  function syncFullscreen(){
+    const native=!!(document.fullscreenElement||document.webkitFullscreenElement);
+    document.body.classList.toggle('immersive',native||fallbackFullscreen);
+    $('fullscreen').setAttribute('aria-label',native?'退出全屏':fallbackFullscreen?'退出沉浸模式':'进入全屏');
+    $('fullscreen').setAttribute('aria-pressed',String(native||fallbackFullscreen));
+    invalidate();
+  }
+  async function toggleFullscreen(){
+    if(fullscreenBusy)return;
+    fullscreenBusy=true;
+    try{
+      if(document.fullscreenElement||document.webkitFullscreenElement){
+        await (document.exitFullscreen?document.exitFullscreen():document.webkitExitFullscreen());
+      }else if(fallbackFullscreen){fallbackFullscreen=false;status();}
+      else{
+        const root=document.documentElement;
+        try{
+          if(root.requestFullscreen)await root.requestFullscreen({navigationUI:'hide'});
+          else if(root.webkitRequestFullscreen)await root.webkitRequestFullscreen();
+          else throw Error('Fullscreen unavailable');
+          status();
+        }catch{
+          fallbackFullscreen=true;
+          const notice='当前浏览器无法隐藏地址栏，已切换沉浸模式。再次双击可退出。';
+          status(notice);
+          window.setTimeout(()=>{if($('status').textContent===notice)status();},6000);
+        }
+      }
+    }catch{status('暂时无法退出全屏，请使用浏览器的退出全屏按钮或 Esc 键。',true);}
+    finally{fullscreenBusy=false;syncFullscreen();}
+  }
+  $('fullscreen').addEventListener('click',toggleFullscreen);
+  document.addEventListener('fullscreenchange',syncFullscreen);
+  document.addEventListener('webkitfullscreenchange',syncFullscreen);
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&fallbackFullscreen){fallbackFullscreen=false;status();syncFullscreen();}});
+  $('openSettings').addEventListener('click',()=>{settings.showModal();});
+  $('closeSettings').addEventListener('click',()=>settings.close());
+  settings.addEventListener('click',e=>{const r=settings.getBoundingClientRect();if(e.target===settings&&(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom))settings.close();});
+  let dragDepth=0;
+  $('viewer').addEventListener('dragenter',e=>{e.preventDefault();dragDepth++;$('viewer').classList.add('drag-over');});
+  $('viewer').addEventListener('dragover',e=>{e.preventDefault();e.dataTransfer.dropEffect='copy';});
+  $('viewer').addEventListener('dragleave',()=>{if(--dragDepth<=0){dragDepth=0;$('viewer').classList.remove('drag-over');}});
+  $('viewer').addEventListener('drop',e=>{e.preventDefault();dragDepth=0;$('viewer').classList.remove('drag-over');loadMedia(e.dataTransfer.files?.[0]);});
+  document.addEventListener('dragover',e=>e.preventDefault());
+  document.addEventListener('drop',e=>e.preventDefault());
+  document.addEventListener('visibilitychange',()=>{state.lastTime=0;if(!document.hidden)invalidate();else if(state.frame){cancelAnimationFrame(state.frame);state.frame=0;}});
+  new ResizeObserver(invalidate).observe($('viewer'));
+  canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();destroyed=true;if(state.frame)cancelAnimationFrame(state.frame);state.frame=0;status('图形画面暂时中断，正在等待恢复。',true);});
+  canvas.addEventListener('webglcontextrestored',()=>{try{destroyed=false;initializeRenderer();watchVideoFrames();status();invalidate();}catch{status('图形画面无法恢复，请刷新页面。',true);}});
+  window.addEventListener('pagehide',()=>{video.pause();if(state.frame)cancelAnimationFrame(state.frame);state.frame=0;});
+  window.addEventListener('pageshow',()=>{state.lastTime=0;if(state.source==='video'&&state.playing)video.play().catch(()=>{state.playing=false;updatePlayback();});invalidate();});
+  if(gl){try{initializeRenderer();watchVideoFrames();invalidate();}catch(error){console.error('Renderer initialization failed:',error);destroyed=true;$('canvasError').hidden=false;}}
+  else{$('canvasError').hidden=false;}
+  updatePlayback();
+
+  const modelContext=document.modelContext;
+  if(modelContext?.registerTool){
+    const lifecycle=new AbortController();
+    try{Promise.resolve(modelContext.registerTool({
+      name:'set_fold_angle',title:'设置折叠角度',
+      description:'Set the visible phone opening angle from 0 (closed) to 180 (open), stop automatic folding, and optionally enable or disable the frosted glass transition. Does not access or upload media.',
+      inputSchema:{type:'object',properties:{angle:{type:'number',minimum:0,maximum:180},glassEffect:{type:'boolean'}},required:['angle'],additionalProperties:false},
+      annotations:{readOnlyHint:false,untrustedContentHint:false},
+      execute(input){if(!input||typeof input.angle!=='number'||!Number.isFinite(input.angle)||input.angle<0||input.angle>180||Object.keys(input).some(k=>!['angle','glassEffect'].includes(k))||(input.glassEffect!==undefined&&typeof input.glassEffect!=='boolean'))throw new Error('angle must be between 0 and 180; glassEffect must be boolean.');
+        if(input.glassEffect!==undefined){state.effect=input.glassEffect;$('glassEffect').checked=state.effect;}
+        setAngle(input.angle);return {angle:state.angle,glassEffect:state.effect};}
+    },{signal:lifecycle.signal})).catch(()=>{});}catch{/* Browsers without the proposed API keep the same UI. */}
+  }
+})();
+
+});</script>
+</head>
+<body>
+<main class="viewer" id="viewer" aria-label="折叠手机体验">
+<canvas id="screen" tabindex="0" aria-label="折叠手机：左右拖动开合，双击全屏；方向键调整，F 键切换全屏" aria-describedby="gestureHint"></canvas>
+<div class="canvas-error" id="canvasError" hidden>无法启动图形加速，请使用支持 WebGL 的浏览器。</div>
+<header class="topbar">
+<div class="wordmark"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M4 8h10v18H4zM18 8l10-4v18l-10 4z"/></svg><span>iDuo</span></div>
+<div class="top-actions">
+<button id="fullscreen" class="icon-button" aria-label="进入全屏" title="全屏 · 双击手机或按 F"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/></svg></button>
+<button id="openSettings" class="icon-button" aria-label="打开设置" aria-haspopup="dialog" aria-controls="settings"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/><circle cx="9" cy="6" r="2"/><circle cx="16" cy="12" r="2"/><circle cx="8" cy="18" r="2"/></svg></button>
+</div>
+</header>
+<div class="view-label" id="viewLabel">内屏 · 完全展开</div>
+<p class="rotate-hint">↻ 横屏观看，视野更大</p>
+<div class="stage-bottom">
+<p id="gestureHint" class="gesture-hint">拖动开合 · 双击全屏</p>
+<button class="choose-video" id="chooseVideo" title="选择照片或视频，仅在本机使用"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="8" cy="9" r="1.5"/><path d="m4 17 5-5 4 4 3-3 5 5"/></svg><span>选择照片 / 视频</span></button>
+<p class="privacy">照片和视频只在本机使用，不会上传</p>
+<a class="repo-link" href="https://github.com/esolk/iphone-duo-fold-experience" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9z"/></svg><span class="repo-message">If you like iDuo, please give it a star on GitHub.</span><span class="repo-compact">Star on GitHub ↗</span></a>
+</div>
+<input type="file" id="fileInput" accept="image/*,video/*,.heic,.heif,.mov,.mp4,.m4v,.webm" hidden>
+<p id="status" class="status" role="status" aria-live="polite"></p>
+<div class="drop-cover" aria-hidden="true">松开，换成你的照片或视频</div>
+</main>
+<dialog class="controls" id="settings" aria-labelledby="settingsTitle">
+<div class="panel-heading"><h1 id="settingsTitle">画面设置</h1><button id="closeSettings" class="icon-button" aria-label="关闭设置">×</button></div>
+<div class="media-card"><div class="media-thumb" id="mediaThumb" aria-hidden="true"></div><div class="media-info"><strong id="mediaName">流光 · 内置演示</strong><span id="mediaInfo">动态色彩 / 循环播放</span></div><button class="icon-button" id="resetMedia" aria-label="恢复内置演示" title="恢复内置演示">↺</button></div>
+<div class="media-controls"><button id="playVideo" class="small-button" aria-label="暂停画面">Ⅱ <span>暂停</span></button><button id="muteVideo" class="small-button" disabled aria-label="开启视频声音">♪ <span>已静音</span></button></div>
+<label class="setting-row">画面适配<select id="fitMode" aria-label="画面适配"><option value="cover">铺满</option><option value="contain">完整</option></select></label>
+<div class="divider"></div>
+<div class="panel-heading"><h2>开合角度</h2><output id="angleValue" for="angle">180<span>°</span></output></div>
+<input type="range" id="angle" min="0" max="180" step="0.1" value="180" aria-label="开合角度">
+<div class="presets"><button data-angle="0">闭合</button><button data-angle="90">半折</button><button data-angle="180" class="active">展开</button></div>
+<button class="animate-button" id="animateFold" aria-pressed="false"><span aria-hidden="true">▷</span><span id="animateText">播放开合动画</span></button>
+<label class="setting-row" for="speed">播放速度<select id="speed"><option value="0.45">慢动作</option><option value="1" selected>正常</option><option value="1.5">快速</option></select></label>
+<div class="divider"></div>
+<label class="switch-row" for="glassEffect"><span>玻璃过渡</span><input type="checkbox" role="switch" id="glassEffect" checked><span class="switch-track" aria-hidden="true"></span></label>
+<p class="panel-note">照片和视频只在本机使用，不会上传。</p>
+<a class="reference" href="https://www.apple.com/iphone-duo/" target="_blank" rel="noopener noreferrer">动画参考 ↗</a>
+<a class="repo-link panel-repo" href="https://github.com/esolk/iphone-duo-fold-experience" target="_blank" rel="noopener noreferrer">If you like iDuo, please give it a star on GitHub. ↗</a>
+</dialog>
+</body>
+</html>

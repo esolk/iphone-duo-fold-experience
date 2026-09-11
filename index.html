@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#090a0c">
+<meta name="description" content="选择照片或视频，拖动体验折叠手机。媒体只在本机使用，不会上传。">
+<title>iDuo</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M5 7h9v20H5zM18 7l9-3v20l-9 3z' fill='none' stroke='%23d4f584' stroke-width='2'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+<script src="renderer.js" defer></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+<main class="viewer" id="viewer" aria-label="折叠手机体验">
+<canvas id="screen" tabindex="0" aria-label="折叠手机：左右拖动开合，双击全屏；方向键调整，F 键切换全屏" aria-describedby="gestureHint"></canvas>
+<div class="canvas-error" id="canvasError" hidden>无法启动图形加速，请使用支持 WebGL 的浏览器。</div>
+<header class="topbar">
+<div class="wordmark"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M4 8h10v18H4zM18 8l10-4v18l-10 4z"/></svg><span>iDuo</span></div>
+<div class="top-actions">
+<button id="fullscreen" class="icon-button" aria-label="进入全屏" title="全屏 · 双击手机或按 F"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/></svg></button>
+<button id="openSettings" class="icon-button" aria-label="打开设置" aria-haspopup="dialog" aria-controls="settings"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/><circle cx="9" cy="6" r="2"/><circle cx="16" cy="12" r="2"/><circle cx="8" cy="18" r="2"/></svg></button>
+</div>
+</header>
+<div class="view-label" id="viewLabel">内屏 · 完全展开</div>
+<p class="rotate-hint">↻ 横屏观看，视野更大</p>
+<div class="stage-bottom">
+<p id="gestureHint" class="gesture-hint">拖动开合 · 双击全屏</p>
+<button class="choose-video" id="chooseVideo" title="选择照片或视频，仅在本机使用"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="8" cy="9" r="1.5"/><path d="m4 17 5-5 4 4 3-3 5 5"/></svg><span>选择照片 / 视频</span></button>
+<p class="privacy">照片和视频只在本机使用，不会上传</p>
+<a class="repo-link" href="https://github.com/esolk/iphone-duo-fold-experience" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9z"/></svg><span class="repo-message">If you like iDuo, please give it a star on GitHub.</span><span class="repo-compact">Star on GitHub ↗</span></a>
+</div>
+<input type="file" id="fileInput" accept="image/*,video/*,.heic,.heif,.mov,.mp4,.m4v,.webm" hidden>
+<p id="status" class="status" role="status" aria-live="polite"></p>
+<div class="drop-cover" aria-hidden="true">松开，换成你的照片或视频</div>
+</main>
+<dialog class="controls" id="settings" aria-labelledby="settingsTitle">
+<div class="panel-heading"><h1 id="settingsTitle">画面设置</h1><button id="closeSettings" class="icon-button" aria-label="关闭设置">×</button></div>
+<div class="media-card"><div class="media-thumb" id="mediaThumb" aria-hidden="true"></div><div class="media-info"><strong id="mediaName">流光 · 内置演示</strong><span id="mediaInfo">动态色彩 / 循环播放</span></div><button class="icon-button" id="resetMedia" aria-label="恢复内置演示" title="恢复内置演示">↺</button></div>
+<div class="media-controls"><button id="playVideo" class="small-button" aria-label="暂停画面">Ⅱ <span>暂停</span></button><button id="muteVideo" class="small-button" disabled aria-label="开启视频声音">♪ <span>已静音</span></button></div>
+<label class="setting-row">画面适配<select id="fitMode" aria-label="画面适配"><option value="cover">铺满</option><option value="contain">完整</option></select></label>
+<div class="divider"></div>
+<div class="panel-heading"><h2>开合角度</h2><output id="angleValue" for="angle">180<span>°</span></output></div>
+<input type="range" id="angle" min="0" max="180" step="0.1" value="180" aria-label="开合角度">
+<div class="presets"><button data-angle="0">闭合</button><button data-angle="90">半折</button><button data-angle="180" class="active">展开</button></div>
+<button class="animate-button" id="animateFold" aria-pressed="false"><span aria-hidden="true">▷</span><span id="animateText">播放开合动画</span></button>
+<label class="setting-row" for="speed">播放速度<select id="speed"><option value="0.45">慢动作</option><option value="1" selected>正常</option><option value="1.5">快速</option></select></label>
+<div class="divider"></div>
+<label class="switch-row" for="glassEffect"><span>玻璃过渡</span><input type="checkbox" role="switch" id="glassEffect" checked><span class="switch-track" aria-hidden="true"></span></label>
+<p class="panel-note">照片和视频只在本机使用，不会上传。</p>
+<a class="reference" href="https://www.apple.com/iphone-duo/" target="_blank" rel="noopener noreferrer">动画参考 ↗</a>
+<a class="repo-link panel-repo" href="https://github.com/esolk/iphone-duo-fold-experience" target="_blank" rel="noopener noreferrer">If you like iDuo, please give it a star on GitHub. ↗</a>
+</dialog>
+</body>
+</html>
